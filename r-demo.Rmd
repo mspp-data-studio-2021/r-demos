@@ -1,0 +1,727 @@
+---
+title: "Intro to R for Data Analysis"
+description: |
+  A workshop for NYU Wagner MSPP class Policy & Data Studio on the basics of R for data analysis
+author:
+  - name: Maxwell Austensen
+    url: https://github.com/austensen
+date: "`r Sys.Date()`"
+output: 
+    radix::radix_article:
+      toc: true
+      toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE,
+	rows.print=5
+)
+
+options(tibble.max_extra_cols = 5, tibble.print_max = 5)
+
+library(fs) # cross-platform file system operations
+```
+
+All the workshop materials are available on [GitHub](https://github.com/wagner-mspp-2020/r-demos).
+
+
+# R
+
+[R](https://www.r-project.org/) is a free and open-source software environment for statistical computing and graphics. It has a more narrow set of uses and a smaller user base compared python, but because it is specifically designed for data analysis it is a great language for data analysts to learn. In recent years it has become increasingly popular and has also become much easier to learn, especially for those new to coding. 
+
+There are three main reasons that I enjoying using R myself and teaching it to others. 
+
+1. R has an amazing community of users that have produced wealth of user friendly guides, documentation, and other tools and resources to support people learning the language. 
+2. [RStudio](https://www.rstudio.com/products/rstudio/) is an incredibly helpful application (Integrated Development Environment) in which you can work with R. 
+3. A wide ecosystem of user-written packages that provide tools for almost every possible use case. Especially important is the collection of packages known as the _Tidyverse_ that prioritize good design and documentation that make it easy to learn R.
+
+## R Community Resources
+
+Here is just a small sample of some of the great resources available for learning R:
+
+* [R for Data Science](http://r4ds.had.co.nz/), a wonderful free book that provides a good introduction to R for data analysis
+* [Tidyverse packages website](http://Tidyverse.org) provides comprehensive documentation for all packages, including helpful guides and examples
+* [Stat545](http://stat545.com/index.html), a university course on data science with R that shares most of the materials
+* RStudio [webinars](https://www.rstudio.com/resources/webinars/), [online learning materials](https://www.rstudio.com/online-learning/), and [cheatsheets](https://www.rstudio.com/resources/cheatsheets/)
+* [RStudio Community](https://community.rstudio.com/), a friendlier version of StackOverflow dedicated to R and RStudio packages
+* [StackOverflow for R](https://stackoverflow.com/questions/tagged/r)
+
+
+## RStudio
+
+The [RStudio Desktop](https://www.rstudio.com/products/rstudio/#Desktop) application is free to download. 
+
+<aside>
+They also now provide [Rstudio Cloud](https://rstudio.cloud) as a free service that works just like RStudio Desktop but it is all accessed through the browser and requires no installation.
+</aside>
+
+This is the default RStudio interface. 
+* The top left pane contains all your code files. This is where you can write and save all the code for your analysis. 
+* The bottom left pane has the R console where you can run individual pieces of R code, such as quick calculations, printing objects, or anything else that you don't need to save in your final files.
+* The top right pane contains a list of all the objects currently in your environment. If you click on a dataframe object it will open in a viewer in the top left pane where you can browse, sort, and filter your view of the data (without altering the object itself)
+* The bottom right pane contains a few important tabs: the plot viewer where any graphs you create will appear, the files explorer, and the help page
+
+```{r echo=FALSE}
+knitr::include_graphics(path("img", "rstudio-screenshot.png"))
+```
+
+## Packages in R
+
+### Installing and Loading Packages
+
+R is an open-source language so in addition to the basic functions that come standard with R (referred to as _Base R_) there are more than 10,000 user written packages that can accomplish virtually any task in R. There is an official repository for these packages called CRAN that does some vetting of the quality of packages, and packages from here can be installed directly from R using:
+
+```{r eval=FALSE}
+install.packages("PackageName")
+```
+
+These packages only need to be installed like this once, and after that initial installation we only need to load the packages that we want use for each analysis with `library()`. 
+
+This project uses [`renv`](https://rstudio.github.io/renv/articles/renv.html) to handle dependency managemnt. To get this projct set up on your own system, open the project in RStudio (and open the `.Rproj` file), install `renv` (`install.packages("renv")`), and run `renv::init()`. 
+
+> If you haven't installed any R packages yet, this might take a little while.
+
+### _Tidyverse_ Packages
+
+All of the packages we are using here are part of a collection of R packages referred to as the [`tidyverse`](https://www.tidyverse.org/). 
+
+> The Tidyverse is an opinionated collection of R packages designed for data science. All packages share an underlying design philosophy, grammar, and data structures. 
+All of these packages are extremely well-maintained and have helpful websites that include, examples and guides, function documentation, cheatsheets, and links to the GitHub repos where the packages are developed. 
+
+The following are the core set of Tidyverse packages, but there are [many more](https://www.tidyverse.org/packages/).
+
+* [`dplyr`](https://dplyr.Tidyverse.org) is a grammar of data manipulation, providing a consistent set of verbs that help you solve the most common data manipulation challenges
+* [`readr`](https://readr.Tidyverse.org) provides a fast and friendly way to read rectangular data (like csv, tsv, and fwf)
+* [`tidyr`](https://tidyr.Tidyverse.org) helps you create tidy data. Tidy data is data where: Each variable is in a column, each observation is a row, and each value is a cell
+* [`stringr`](https://stringr.Tidyverse.org) provides a cohesive set of functions designed to make working with strings as easy as possible
+* [`forcats`](https://forcats.Tidyverse.org) provides a suite of useful tools that solve common problems with factors
+* [`purrr`](https://purrr.Tidyverse.org) is a complete and consistent set of tools for working with functions and vectors
+* [`ggplot2`](https://ggplot2.Tidyverse.org) is a system for declaratively creating graphics, based on The Grammar of Graphics
+
+In addition to the package websites, there is an amazing free book that covers how to use all these packages to do data analysis, called [*R for Data Science*](http://r4ds.had.co.nz/).
+
+<aside>
+There is a special `tidyverse` package that installs all the related package, and using `library(tidyverse)` loads all seven of these core packages.
+</aside>
+
+
+```{r message=FALSE}
+library(dplyr) # manipulate dataframes
+library(readr) # read/write dataframes
+library(tidyr) # reshaping dataframes
+library(stringr) # string manipulation
+library(forcats) # factor manipulation
+library(purrr) # iteration (instead of loops)
+library(ggplot2) # making plots
+```
+
+
+# Import and Preview Dataset
+
+For these examples we'll be using a dataset of buildings from the Public Advocate's [NYC Landlord Watchlist](http://landlordwatchlist.com/). 
+
+<aside>
+This dataset was scraped from the Public Advocate's website in December 2018 for a [previous workshop](https://github.com/austensen/hdc-r-workshop), and the file has been copied over from there. The script used to scrape the data is also included here, but only for reference since it won't work anymore.
+</aside>
+
+Lets get started by reading in our dataset from a CSV file using `read_csv` form the `readr` package.
+
+We'll also be making use of the `fs` package, which provides cross-platform file system operations. 
+
+If you need to import dataset that aren't simple rectanular flat files (like csv, tsv, and fwf) then you will need another package.   
+* [`DBI`](https://github.com/rstats-db/DBI) for relational databases (paired with database specific backends),  
+* [`haven`](https://haven.tidyverse.org/) for SPSS, Stata, and SAS data,  
+* [`httr`](https://github.com/r-lib/httr) for web APIs,  
+* [`readxl`](https://readxl.tidyverse.org/) for .xls and .xlsx sheets,  
+* [`rvest`](https://github.com/tidyverse/rvest) for web scraping,  
+* [`jsonlite`](https://github.com/jeroen/jsonlite#jsonlite) for JSON, and  
+* [`xml2`](https://github.com/r-lib/xml2) for XML. 
+
+```{r}
+library(fs) # cross-platform file system operations
+
+watchlist_bldgs <- read_csv(path("data-raw", "landlord-watchlist-buildings_2018-12-08.csv"))
+```
+
+<aside>
+In R the (admittedly quirky) convention is to use `<-` as the assignment operator instead of `=`.
+</aside>
+
+`read_csv()` guesses about the data type of each column, and gives you the column specification is used. Often times this will be what you want, but if you want to override the guesses you can supply your own specification (see `?readr::cols` for details). 
+
+```{r}
+watchlist_bldgs <- read_csv(
+  file = path("data-raw", "landlord-watchlist-buildings_2018-12-08.csv"),
+  col_types = cols(
+    .default = col_character(),
+    units = col_integer(),
+    violations = col_integer()
+  )
+)
+```
+
+Now let's take a look at this new dataframe that we've imported. You can print the dataframe to get a simple preview.
+
+<aside>
+In R when you run code with just an object it is printed to the console the same as if the `print()` function was used.
+</aside>
+
+```{r layout="l-body-outset"}
+watchlist_bldgs
+```
+
+When simply printing the dataframe you'll only see a few rows and as many columns as fit nicely on your screen. When you have many columns it's often helpful to use the function `glimpse()` to see a list of all your columns.
+
+```{r}
+glimpse(watchlist_bldgs)
+```
+
+<aside>
+In RStudio you can also use `View()` to open an window where you can interactively view your dataframe, and even sort and filter that view (without changing the dataframe).
+</aside>
+
+We can also get a very helpful overview of our dataset that includes some informative descriptive statistics using `skim()` from the package [`skimr`](https://docs.ropensci.org/skimr/)
+
+```{r}
+library(skimr)
+
+skim(watchlist_bldgs)
+```
+
+# Data Manipulation with `dplyr`
+
+The package `dplyr` contains functions for basic data manipulation. It is organized around 5 main functions that take a dataframe and manipulate it in some way. The functions are named as verbs which help explain what they do.
+
+* [`filter()`](https://dplyr.Tidyverse.org/reference/filter.html) - filter to the rows you want to keep based on conditions
+* [`select()`](https://dplyr.Tidyverse.org/reference/select.html) - select columns you want to keep
+* [`arrange()`](https://dplyr.Tidyverse.org/reference/arrange.html) - sort dataframe by a column
+* [`mutate()`](https://dplyr.Tidyverse.org/reference/mutate.html) - adds new columns
+* [`summarise()`](https://dplyr.Tidyverse.org/reference/summarize.html) - collapse multiple rows down to a single one
+
+Every one of these functions takes a dataframe as the first argument and returns an altered version of that dataframe.
+
+Inside of these functions columns are referred to with just their names without quotes.
+
+<aside>
+Because we are not assigning the resulting modified dataset to an object the result is simply printed without being saved anywhere
+</aside>
+
+## `filter()`
+
+Use `filter()` find rows/cases where conditions are true. Rows where the condition evaluates to `NA` are dropped.
+
+```{r layout="l-body-outset"}
+bk_bldgs <- filter(watchlist_bldgs, borough == "BROOKLYN")
+bk_bldgs
+```
+
+Multiple conditions are combined with `&`.
+
+```{r layout="l-body-outset"}
+bk_big_bldgs <- filter(watchlist_bldgs, units > 10, borough == "QUEENS")
+bk_big_bldgs
+```
+
+
+## `select()`
+
+Use `select()` to keep or drop columns. You can either specify a set of variables to keep by listing them, or specify columns to be dropped with `-`. 
+
+<aside>
+If we don't assign the resulting of a function to an object the result is simply printed but not saved anywhere.
+</aside>
+
+```{r layout="l-body-outset"}
+select(watchlist_bldgs, landlord, borough, units)
+select(watchlist_bldgs, -landlord)
+```
+
+You can rename the columns that you are selecting within `select()`, or use `rename()` which keeps all columns. 
+
+```{r layout="l-body-outset"}
+select(watchlist_bldgs, borough_name = borough)
+rename(watchlist_bldgs, landlord_name = landlord)
+```
+
+## `mutate()`
+
+Use `mutate()` to add new columns to a dataset. `mutate()` keeps all the existing columns and adds new one to the end of the dataset, and the variant `transmute()` creates new columns but keeps only the new ones.
+
+```{r layout="l-body-outset"}
+mutate(watchlist_bldgs, landlord_lower = str_to_lower(landlord))
+transmute(watchlist_bldgs, violations_per_unit = violations / units)
+```
+
+## `arrange()`
+
+Use `arrange()` to add order the rows in your dataset by the values of one or more columns. Be default they will be in ascending order, and you can use `desc()` for descending order. 
+
+```{r layout="l-body-outset"}
+arrange(watchlist_bldgs, landlord, desc(units))
+```
+
+
+## `summarize()`
+
+You can use `summarize()` on a dataset to collapse down all the rows to a single row to calculate an aggregate statistic of one or more columns. It works in a similar way as `mutate()`, except whereas in mutate you can create new columns that are the same length as your existing dataset, with `summarise()` you will sum some sort of aggregate function (like `sum()`) that takes a column of multiple values and returns only one value.
+
+```{r layout="l-body-outset"}
+summarise(watchlist_bldgs, total_units = sum(units))
+```
+
+## `group_by()`
+
+The 6th function is `group_by()` and this doesn't change the contents of your dataframe, but instead affects how all of the above functions work if they are subsequently called on the dataframe. After a dataframe has been grouped by one or more columns, all functions apply to each group of rows in the dataset as if it was it's own dataset. `group_by()` is most commonly used with summarize. Alone `summarize()` will collapse a dataframe to a single row, but with a grouped dataframe it is collapsed down to one row _per group_. After you have finished with your grouped operations use `ungroup()` to make sure that it doesn't unintentionally alter later operations.
+
+
+```{r layout="l-body-outset"}
+boro_bldgs <- group_by(watchlist_bldgs, borough)
+boro_bldgs <- summarise(boro_bldgs, total_units = sum(units))
+boro_bldgs <- ungroup(boro_bldgs)
+boro_bldgs
+```
+
+
+## Data manipulation pipelines with `%>%` ("pipe")
+
+As you can see above when you want to make a series of changes to a dataframe you can end up repeating yourself a lot and overwriting a dataframe with each step. Thankfully there's a way to avoid this!
+
+The beauty of dplyr is that all of the functions above take a dataframe as the first argument, and return an altered version of that dataframe as the result. This allows us to start with a dataframe and link together multiple functions so that they each make a change to the dataframe then pass it along to the next function. `dplyr` includes a special operator, `%>%` (pronounced "pipe"), that allows us to chain together these function calls. When reading the code for these pipelines you can read `%>%` as "then".
+
+This `%>%` takes the object on the left and passes it to the function on the right as the first argument.
+
+For a simple example, let's look at the function `str_c()`, which concatenates strings together. Instead of passing `"a"` and `"b"` as the first and second argument, we can use the `%>%` to "pipe" the `"a"` into the function as the first argument and the `"b"` becomes the second argument. 
+
+```{r}
+str_c("a", "b")
+"a" %>% str_c("b")
+```
+
+Now let's practice putting together some of these dplyr functions into a little data manipulation pipeline by getting some information about the landlords on the watchlist and the buildings they own in Brooklyn. 
+
+The long pipeline of these `dplyr` functions can seem overwhelming at first, but once you get familiar with the functions you'll be able to read these code chunks like a little paragraph explaining the changes being made to a dataframe. To help illustrate this the following paragraph is a written explanation of every step of the accompanying block of code. 
+
+> We'll start with the full `watchlist_bldgs` dataset, then "pipe" (`%>%`) it into the next function to `filter` the dataset to just buildings where the `borough` is `"Brooklyn"`. Then we `mutate` the dataset to add a new column called `landlord_name` that is simply a more nicely-formatted version of the existing `landlord` column. Then we `select` only the columns that we need: `landlord_name`, `units`, and HPD `violations`. Then we `group_by` the new `landlord_name` column, and then, with the dataset grouped, we'll `summarize` the data across all buildings for each landlord to get some summary information about each landlord and their buildings in Brooklyn. Specifically, we'll `summarize` to get the total number of `buildings` using the special `n()` function that counts the number of rows, we'll also get the `total_units` by `sum`ming the units across all buildings for each landlord, and we'll get the `avg_bldg_size` of each landlord's Brooklyn buildings by taking the `mean` of units across their buildings. Similarly, we get the `sum` and `mean` of HPD `violations` for each landlord. We've now gone from a dataset in which each row represents a building to one in which each row is a landlord. Since we are done with our grouped operations we can `ungroup` the data, then finally we can `arrange` the dataset in `desc`ending order of the number of `buildings` the landlord owns in Brooklyn. After all of this our final resulting dataset is assigned to a new dataframe we'll call `bk_landlords`.
+
+```{r}
+bk_landlords <- watchlist_bldgs %>% 
+  filter(borough == "BROOKLYN") %>% 
+  mutate(landlord_name = str_to_title(landlord)) %>% 
+  select(landlord_name, units, violations) %>% 
+  group_by(landlord_name) %>% 
+  summarize(
+    buildings = n(),
+    total_units = sum(units),
+    avg_bldg_size = mean(units),
+    total_viol = sum(violations),
+    avg_bldg_viol = mean(violations)
+  ) %>% 
+  ungroup() %>% 
+  arrange(desc(buildings))
+bk_landlords
+```
+
+
+# Making graphs with `ggplot2`
+
+Now let's visualize this new dataset we've created using the package `ggplot2`.
+
+ggplot2 is designed to work with dataframe inputs, so the first step is always to use `ggplot(data = your_dataframe)`. You can build plots step by step by adding layers with `+`. The second step is always `aes()`, which establishes the *aes*thetics of the plot by mapping columns from the dataframe to aesthetic elements of the plot. For example, here we are setting the `x` axis values to landlord names and `y` to the total number of HPD violations. After the `aes` is set, you can use one of the many `geom_*()` functions to transform the aesthetics into a type of plot. In this case we want a column plot, so we use `geom_column()`. Finally, we can label any part of our graph with `labs()`.
+
+```{r, layout="l-body-outset"}
+ggplot(data = bk_landlords) +
+  aes(x = landlord_name, y = total_viol) +
+  geom_col() +
+  labs(
+    title = '"Worst" Landlords in Brooklyn',
+    subtitle = "Total HPD Violations in All Buildings for 2017",
+    x = NULL,
+    y = "Number of Violations",
+    caption = "Source: NYC Public Advocate's Landlord Watchlist"
+  )
+```
+
+With only the defaults ggplot2 graphs tend to look pretty good, and are not too difficult to create. However, there are definitely some things we'll want to improve with this graph. Luckily, there is a near-infinite amount of customization possible with ggplot2 to get the plot looking exactly the way you want.
+
+To start, there are clearly too many landlords to display clearly in a graph like this, so we can use dplyr to`arrange` the data by violations and `filter` to keep only the top 10 landlords. The first landlord name doesn't match the same format as the other, so let's remove the `" Properties"` part using `str_remove` from the `stringr` package. It would also be nice if the landlords were sorted in order of the number of violations. To achieve this we can change the `landlord_name` column from a string to instead use R's `factor` datatype, which allows us to specify an ordering to the values. Specifically, we'll use the function `fct_reorder()` from the package `forcats` to make the column a factor and put the values in order based on the values of the `total_viol` column. 
+
+Now we can use this new dataframe with ggplot2 and make a few more changes to improve the graph further. One obvious problem with our initial graph is that the landlord names are completely illegible due to overlap. To solve this we can use the ggplot2 function `coord_flip()` to flip our bars sideways so we can read the labels more cleanly. Another smaller adjustment we can make it to format the violation count labels on our y-axis. To make changes to anything related to one of the *aes*thetic elements of a plot we can use one of the many `scale_*_*` functions. The first `*` is always one of the `aes` element types, and the second `*` indicates the type of data that is mapped to it. In our case we want to make a change to the y axis and we've mapped our count of violations to `y` so it a continuous scale, so the function we'll want to use is `scale_y_continuous()`. Now within that function we'll want to use the formatting function `comma` from the `scales` package on our axis labels. Lastly, we can use one of the `theme_*` functions to apply some alternative styling to the plot. These functions provide you some helpful preset styling, but you can make your own fine-tuned adjustments using `theme()`. This can get a bit overwhelming, but just to illustrate what's possible, here we'll remove the unnecessary lines on the plot, move the landlord name labels over a bit, and change the font of the caption.
+
+<aside>
+If you have a package already installed, you can use a function from it without loading it with `library()` by using `package::function()`. Here we are doing this for `scales::comma` because we only use this single function from the package once.
+</aside>
+
+```{r layout="l-body-outset"}
+landlord_bk_10_worst <- bk_landlords %>% 
+  arrange(desc(total_viol)) %>% 
+  filter(row_number() <= 10) %>% 
+  mutate(
+    landlord_name = str_remove(landlord_name, " Properties"),
+    landlord_name = fct_reorder(landlord_name, total_viol)
+  )
+
+ggplot(data = landlord_bk_10_worst) +
+  aes(x = landlord_name, y = total_viol) +
+  geom_col() +
+  coord_flip() +
+  scale_y_continuous(labels = scales::comma) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.y = element_blank(),
+    axis.text.y = element_text(margin = margin(r = -15)),
+    plot.caption = element_text(face = "italic", color = "darkgrey", margin = margin(t = 10))
+  ) +
+  labs(
+    title = '10 "Worst" Landlords in Brooklyn',
+    subtitle = "Total HPD Violations in All Buildings for 2017",
+    x = NULL,
+    y = "Number of Violations",
+    caption = "Source: NYC Public Advocate's Landlord Watchlist"
+  )
+```
+
+---
+
+# Reshaping data with `tidyr`
+
+> This demo for reshaping data was borrowed from [Sam Raby](https://github.com/sraby)
+
+One of the core ideas of the tidyverse is ["tidy data"](https://tidyr.tidyverse.org/articles/tidy-data.html), which is a structure of datasets that facilitates analysis using the tools in tidyverse packages (`dplyr`, `ggplot2`, etc.). In tidy data: 
+1. Each variable forms a column. 
+2. Each observation forms a row. 
+3. Each type of observational unit forms a table. 
+
+> "Tidy datasets are all alike but every messy dataset is messy in its own way"
+
+There are lots of common problems with datasets that make them untidy, and the package `tidyr` provides some powerful and flexible tools to help tidy them up into the standard format. Here's we'll focus on the most important of those tools, [`pivot_longer`](https://tidyr.tidyverse.org/reference/pivot_longer.html) and [`pivot_wider`](https://tidyr.tidyverse.org/reference/pivot_wider.html).
+
+This annimation (from this [blog post](https://fromthebottomoftheheap.net/2019/10/25/pivoting-tidily/)) nicely captures the basic idea behind the `pivot_*` functions.
+
+```{r echo=FALSE}
+knitr::include_graphics(path("img", "tidyr-longer-wider.gif"))
+```
+
+
+<aside>
+Reshaping data is one of the more complicated tasks in data cleaning, and in R there have been multiple attempts to create tools that make this process easier. You will surely come across a lot of the previous attempts at this, and this can often add to the confusion, but the current tidyverse standard is to use `tidyr` and the `pivot_*` functions. Below are some of the older packags and functions you may coe across, but most/all of these have now been deprecated and you should instead use the newer `tidyr` methods: `base` R's `stack` and `unstack`, `reshape2`'s `melt` and `cast`, `tidyr`'s older `spread` and `gather`. You can read a more in depth article about all the ways to "pivot" your data in this [article](https://tidyr.tidyverse.org/articles/pivot.html) on the `tiyr` website. 
+</aside>
+
+For this example of reshaping data we'll be working with a dataset of building in NYC that have rent stabilized units from http://taxbills.nyc/. This project scraped data from PDFs of property tax documents to get estimates for rent stabilized units counts in buildings across NYC. You can find a direct link to the data we're using and read up on the various field names at the [Github project page](https://github.com/talos/nyc-stabilization-unit-counts#user-content-data-usage)
+
+In this separate script we download the file if we don't already have it. 
+
+```{r}
+source("download-rent-stab.R")
+```
+
+```{r}
+taxbills <- read_csv(path("data-raw", "rent-stab-units_joined_2007-2017.csv"))
+```
+
+For this demo, we only want to look at rent stabilized unit counts, which according to the Github documentation corresponds to column names that end in "uc". Let's also grab BBL (which is a unique identifier for NYC buildings) and Borough while we're at it:
+
+```{r}
+rentstab <- taxbills %>% select(borough, ucbbl, ends_with("uc") )
+
+rentstab
+```
+
+<aside>
+`starts_with(...)` and `ends_with(...)` are some of the the many "select helpers", which are a collection of functions that do just that: help you consisely select columns. In the case of these two functions, it matches a pattern of text at the beginning or end of the variable name. Some others include `everything()`, `contains()`, and `where()`. For more information see `?tidyselect`.
+</aside>
+
+Annoyingly, the data separates unit counts for different years into different columns, violating the principle of tidy data that every column is a variable. To make proper use of ggplot to visualizae our data, we'll need to first tidy up our dataset to get all of the year values in one column and the unit counts into another.
+
+We can use `pivot_longer` to achieve this, performing this basic transformation:
+
+```{r echo=FALSE, layout="l-body-outset"}
+knitr::include_graphics(path("img", "tidy-pivoting-longer.png"))
+# https://storybench.org/wp-content/uploads/2019/08/tidy-pivoting-longer.png
+```
+
+
+```{r}
+rs_long <- rentstab %>% 
+  pivot_longer(
+    ends_with("uc"),  # The multiple column names we want to mush into one column
+    names_to = "year", # The title for the new column of names we're generating
+    values_to = "units" # The title for the new column of values we're generating
+  )
+
+rs_long
+```
+
+Now that we have our data in the proper "long" (tidy) format, we can start working towards our desired plot. Let's try and make a yearly timeline of rent stab. unit counts for the boroughs of Manhattan and Brooklyn:
+
+
+```{r}
+rs_long_mn_bk_summary <- rs_long %>% 
+  filter(
+    borough %in% c("MN","BK"), # Filter only Manhattan and Brooklyn values
+    !is.na(units) # Filter out null unit count values
+  ) %>% 
+  mutate(
+    year = str_remove(year, "uc"), # Remove "uc" from year values
+    year = as.integer(year) # change from character to integer
+  ) %>% 
+  group_by(year, borough) %>%
+  summarise(total_units = sum(units)) %>% 
+  ungroup()
+
+rs_long_mn_bk_summary
+```
+
+Let's build our bar graph. We are going to specify a `dodge` property of the plot to show the Manhattan and Brooklyn bars side-by-side: 
+
+```{r layout="l-body-outset"}
+rs_over_time_graph_col <- ggplot(rs_long_mn_bk_summary) +
+  aes(x = year, y = total_units, fill = borough) +
+  geom_col(stat = "identity", position = "dodge") +
+  scale_x_continuous(breaks = 2007:2017) +
+  scale_y_continuous(labels = scales::label_number_si()) +
+  scale_fill_discrete(labels = c("BK" = "Brooklyn", "MN" = "Manhattan")) +
+  labs(
+    title = "Total Rent Stabilized Units over Time",
+    subtitle = "Manhattan and Brooklyn, 2007 to 2017",
+    fill = NULL,
+    x = "Year",
+    y = "Total Rent Stabilized Units",
+    caption = "Source: taxbills.nyc"
+  )
+
+rs_over_time_graph_col
+```
+
+We can also change the `geom_*` function, and make a few other tweaks to change this to a line graph instead. 
+
+```{r layout="l-body-outset"}
+rs_over_time_graph_line <- ggplot(rs_long_mn_bk_summary) +
+  aes(x = year, y = total_units, color = borough) +
+  geom_line() +
+  scale_x_continuous(breaks = 2007:2017) +
+  scale_y_continuous(labels = scales::label_number_si()) +
+  scale_color_discrete(labels = c("BK" = "Brooklyn", "MN" = "Manhattan")) +
+  labs(
+    title = "Total Rent Stabilized Units over Time",
+    subtitle = "Manhattan and Brooklyn, 2007 to 2017",
+    color = NULL,
+    x = "Year",
+    y = "Total Rent Stabilized Units",
+    caption = "Source: taxbills.nyc"
+  )
+
+rs_over_time_graph_line
+```
+
+If you ever need to make the opposite tranformation to go from "long" data to "wide", you can use `pivot_wider`. For example, we can reverse the change we made above using the following code.
+
+```{r}
+rs_wide <- rs_long %>% 
+  pivot_wider(
+    names_from = year, # The current column containing our future column names 
+    values_from = units # The current column containing the values for our future columns
+  )
+
+rs_wide
+```
+
+
+---
+
+# Census/ACS data with `tidycensus`
+
+Now we'll put all these skills into practice with Census data, which will be relevant to many of your projects.
+
+The [`tidycensus`](https://walker-data.com/tidycensus/) package uses the Census Bureau's APIs to download Decennial Census and ACS summary file estaimtes. As the name implies, the package fits in with the tidyverse collection of packages. 
+
+While the Census API is free to use, they require you to sign up for an API Key to get access. This is easy to do, all you need to provide is an email and there are instructions for doing this on the help package for this function: `?census_api_key`
+
+```{r}
+library(tidycensus)
+
+census_api_key("c32dfbf7d25fe9558fd11bf021780457970f96ff")
+```
+
+Tidycensus includes decennial census and ACS data, but today we'll stick with just ACS using `get_acs()`. There are many variables and they need to be specified using codes. We can explore these using `load_variables()`
+
+```{r}
+acs_vars <- load_variables(2017, "acs5", cache = TRUE)
+acs_vars
+```
+
+<aside>
+The list can be a bit overwhelming, so to make it easier to first find the table use RStudio's data viewer and the column filter option to filter to just the first row of each table `"_001"`
+</aside>
+
+The main function to extract the data is a bit complicated, you should pull up the help page (`?get_acs`) and walk through the arguments as you write it out. 
+
+* `geography`: the level of geography we want for our data, in this case census tract. ([Full list of all available geography levels](https://walker-data.com/tidycensus/articles/basic-usage.html#geography-in-tidycensus))
+* `state`: if the requested geography nests within states, you can limit to one or more states
+* county: if the requested geography nests within counties, you can limit to one or more counties
+* `variables`: this can either be a simple vector of variable codes, or a named vector of variable codes where the names replace the codes in the column names
+* `survey`: the ACS releases 1-, 3-, and 5-year estimates. (Tracts are only available with 5-year data)
+* `year`: this is the latest year of the range. So 2018 with "acs5" means 2014-2018
+* `output`: this can either be "tidy" (default) or wide. For mapping "wide" makes since - where each variable is it's own column
+* `geometry`: whether to include geometries (shapes) with the data
+
+
+In this demo we'll start by just downloading the estimates, and will incorporate the geometries later on.
+
+
+```{r echo=FALSE, layout="l-body-outset"}
+knitr::include_graphics(path("img", "census-geo-hierarchy.jpg"))
+# https://pad.human.cornell.edu/census2020/boundaries.cfm
+```
+
+
+```{r results='hide', cache=TRUE}
+acs_tracts_raw <- get_acs(
+  geography = "tract",
+  state = "NY",
+  county = c("005", "047", "061", "081", "085"), # NYC counties/boroughs
+  variables = c(
+    "gross_rent_med" = "B25064_001", # median gross rent
+    "hh_inc_med" = "B19013_001", # median household income
+    "rent_burden_med" = "B25071_001", # median rent burden
+    "pov_pct" = "C17002_001", # poverty rate
+    "hh_size_avg" = "B25010_001", # average hosehold size
+    "occ_units" = "B25003_001", # total occupied units
+    "occ_renter_units" = "B25003_003", # renter occupied units
+    "vac_forrent_units" = "B25004_002", # vacant units for rent
+    "vac_rented_units" = "B25004_003" # vacant units rented
+  ),
+  survey = "acs5",
+  year = 2017,
+  output = "wide",
+  geometry = FALSE
+)
+```
+
+```{r echo=FALSE}
+knitr::include_graphics(path("img", "census-fips-geoid.png"))
+```
+
+
+```{r}
+acs_tracts_clean <- acs_tracts_raw %>% 
+  rename(geoid = GEOID) %>% 
+  mutate(
+    state = str_sub(geoid, 1, 2),
+    county = str_sub(geoid, 3, 5),
+    tract = str_sub(geoid, 6, 11),
+    renter_pctE = occ_renter_unitsE / na_if(occ_unitsE, 0),
+    renter_pctM = moe_ratio(occ_renter_unitsE, na_if(occ_unitsE, 0), occ_renter_unitsM, occ_unitsM),
+    rental_unitsE = occ_renter_unitsE + vac_forrent_unitsE + vac_rented_unitsE
+  ) %>% 
+  # moe_sum is designed to sum one column, but we can adjust the behaviour by
+  # using rowwise and c_across from dplyr (this is a bit confusing, and you
+  # won't come across it much)
+  rowwise() %>% 
+  mutate(
+    rental_unitsM = moe_sum(c_across(c(occ_renter_unitsM, vac_forrent_unitsM, vac_rented_unitsM)))
+  ) %>% 
+  ungroup()
+
+acs_tracts_clean
+```
+
+Now that we have our nice clean dataset of tract-level indicators, we can easily vizualize some of the relationships between indicators across tracts with the basics we leanred about ggplot. Here we'll expand beyond the `geom_col` and `geom_line`, and make a scatter point graph with `geom_point` and add a simple smoothed conditional mean line with `geom_smoth` to help cut through the potential overplotting and reveal the pattern. 
+
+```{r layout="l-body-outset"}
+ggplot(acs_tracts_clean) +
+  aes(x = renter_pctE, y = pov_pctE) +
+  geom_point(size = 0.5, alpha = 0.25) +
+  geom_smooth() +
+  theme_minimal()
+```
+
+# Joining datasets
+
+Now we can combine some of our data. First we'll take the property level rent stabilization data and aggregate the counts of stabilized units by census tract. Then we can join that new aggregated data with our ACS tract data. This will allow us to incorporate the count of rental units from the ACS data to create a tract-level measure of share of rental units that are rent stabilized. 
+
+To eventually join these two datasets we'll need to have a common column that identies the rows in each dataset - in this case it will be census tract "geoid". One issue is that in the rent stabilization data the tract column is not in the same format, so first will have to fix that.
+
+```{r}
+tract_stab_units_2017 <- taxbills %>% 
+  mutate(
+    county = recode(borough, "MN" = "061", "BX" = "005", "BK" = "047", "QN" = "081", "SI" = "085"),
+    tract = scales::number(ct2010, accuracy = 0.01) %>% str_remove("\\.") %>% str_pad(6, "left", "0"),
+    geoid = str_c("36", county, tract)
+  ) %>% 
+  group_by(geoid) %>% 
+  summarise(stab_units_2017 = replace_na(sum(`2017uc`), 0)) %>% 
+  ungroup()
+
+tract_stab_units_2017  
+```
+
+There are a few different types of joins that you can use to merge two datasets. 
+
+```{r echo=FALSE, layout="l-body-outset"}
+knitr::include_graphics(path("img", "dplyr-joins-left-right-inner-full.png"))
+```
+
+In this case we'll be using the most common join type - `left_join` - to keep all the records from our left table (ACS data) and merge in all the data for matching records in the right table (stabilized unit counts). 
+
+```{r}
+tracts_acs_stab <- acs_tracts_clean %>% 
+  left_join(tract_stab_units_2017, by = "geoid")
+
+tracts_acs_stab %>% select(geoid, rental_unitsE, stab_units_2017)
+```
+
+Whenever you are working with joins, it's always important to inspect the results carfeully to make sure everything went as expected, and ensure that you understand what happened. Joins can very easily introduce errors into your work without you noticing. For example, you can easily introduce duplicate records or you can drop important records you need. 
+
+A couple helpful ways to inspect your data actually make use of some special versions of join functions, known as "filtering" joins, that do the matching between datasets without actually merging in any new data. 
+
+```{r echo=FALSE, layout="l-body-outset"}
+knitr::include_graphics(path("img", "dplyr-joins-semi-anti.png"))
+```
+
+Above we used `left_join` to merge in all the records from the right table that find matches in the left table. Here we'll use `semi_join` to keep only the records from the left table that find matches in the right table. This will let us see what tracts from the ACS data don't have any records in the rent stabilization data. And then we can use some of the same basic tools to get a better understanding of that data, for example counting up the rows by borough (county). 
+
+```{r}
+in_acs_notin_stab <- acs_tracts_clean %>% 
+  anti_join(tract_stab_units_2017, by = "geoid")
+
+in_acs_notin_stab %>% count(county)
+```
+
+Once we are confident that our join went as planned, we can continue with our analysis work. Next we'll use data from the two sources to create a measure of the share of al rental units that are rent stabilized. 
+
+```{r}
+tracts_rent_info <- tracts_acs_stab %>% 
+  mutate(rental_stab_pct = replace_na(stab_units_2017 / na_if(rental_unitsE, 0), 0)) %>% 
+  select(county, geoid, rental_stab_pct, rent_burden_medE)
+
+tracts_rent_info
+```
+
+```{r layout="l-body-outset"}
+tracts_rent_info %>% 
+  filter(
+    rental_stab_pct > 0,
+    rental_stab_pct <= 1
+  ) %>% 
+  ggplot() +
+  aes(x = rental_stab_pct, y = rent_burden_medE) +
+  geom_point(size = 0.5, alpha = 0.25) +
+  geom_smooth()
+```
+
+```{r layout="l-body-outset"}
+tracts_rent_info %>% 
+  filter(
+    rental_stab_pct > 0,
+    rental_stab_pct <= 1
+  ) %>% 
+  ggplot() +
+  aes(x = rental_stab_pct, y = rent_burden_medE) +
+  geom_point(size = 0.5, alpha = 0.25) +
+  geom_smooth() +
+  facet_wrap(~county)
+```
+

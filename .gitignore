@@ -1,0 +1,7 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+r-demo_cache/
+.DS_Store
+data-raw/pluto_20v4.csv
