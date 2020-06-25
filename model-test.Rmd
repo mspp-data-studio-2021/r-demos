@@ -1,0 +1,90 @@
+---
+title: "test"
+author: "Maxwell Austensen"
+date: "6/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+mtcars <- as_tibble(mtcars)
+mtcars
+```
+
+```{r}
+model <- lm(mpg ~ wt + am +factor(cyl), data = mtcars)
+
+model
+```
+
+```{r}
+summary(model)
+```
+
+```{r}
+library(broom)
+
+tidy(model)
+```
+
+```{r}
+glance(model)
+```
+
+```{r}
+augment(model, data = mtcars)
+```
+
+
+
+```{r results='asis'}
+library(stargazer)
+
+stargazer(
+  model,
+  type = "html", 
+  style = "jpam",
+  digits = 2
+)
+```
+
+```{r results='asis'}
+model2 <- lm(mpg ~ wt + am, data = mtcars)
+
+stargazer(
+  model, model2,
+  type = "html", 
+  style = "jpam",
+  digits = 2
+)
+```
+
+$$
+\begin{aligned}
+\mathrm{Unit.Sales}_{t} = \alpha 
+    &+ \beta_{1}  \mathrm{Date}_{t} \\
+    &+ \beta_{2}  \mathrm{Cable.TV}_{t}    \\
+    &+ \beta_{3}  \mathrm{Int.Display}_{t} \\
+    &+ \beta_{4}  \mathrm{Local.Radio}_{t} \\
+    &+ \beta_{5}  \mathrm{Magazines}_{t}   \\
+    &+ \beta_{6}  \mathrm{Network.TV}_{t}  \\
+    &+ \beta_{7}  \mathrm{Spot.TV}_{t} + \epsilon
+\end{aligned}
+$$
+
+
+
+
+## Resources
+
+* [Data Visualization - Work with Models](https://socviz.co/modeling.html) 
+* [Principles of Economterics with R](https://bookdown.org/ccolonescu/RPoE4/)
+* [Statistical Inference via Data Science](https://moderndive.com/)
+* [Tidymodels documentation](https://www.tidymodels.org/)

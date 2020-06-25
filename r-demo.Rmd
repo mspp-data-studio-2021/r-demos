@@ -406,7 +406,7 @@ knitr::include_graphics(path("img", "tidyr-longer-wider.gif"))
 
 
 <aside>
-Reshaping data is one of the more complicated tasks in data cleaning, and in R there have been multiple attempts to create tools that make this process easier. You will surely come across a lot of the previous attempts at this, and this can often add to the confusion, but the current tidyverse standard is to use `tidyr` and the `pivot_*` functions. Below are some of the older packags and functions you may coe across, but most/all of these have now been deprecated and you should instead use the newer `tidyr` methods: `base` R's `stack` and `unstack`, `reshape2`'s `melt` and `cast`, `tidyr`'s older `spread` and `gather`. You can read a more in depth article about all the ways to "pivot" your data in this [article](https://tidyr.tidyverse.org/articles/pivot.html) on the `tiyr` website. 
+Reshaping data is one of the more complicated tasks in data cleaning, and in R there have been multiple attempts to create tools that make this process easier. You will surely come across a lot of the previous attempts at this, and this can often add to the confusion, but the current tidyverse standard is to use `tidyr` and the `pivot_*` functions. Below are some of the older packages and functions you may come across, but most/all of these have now been deprecated and you should instead use the newer `tidyr` methods: `base` R's `stack` and `unstack`, `reshape2`'s `melt` and `cast`, `tidyr`'s older `spread` and `gather`. You can read a more in depth article about all the ways to "pivot" your data in this [article](https://tidyr.tidyverse.org/articles/pivot.html) on the `tiyr` website. 
 </aside>
 
 For this example of reshaping data we'll be working with a dataset of building in NYC that have rent stabilized units from http://taxbills.nyc/. This project scraped data from PDFs of property tax documents to get estimates for rent stabilized units counts in buildings across NYC. You can find a direct link to the data we're using and read up on the various field names at the [Github project page](https://github.com/talos/nyc-stabilization-unit-counts#user-content-data-usage)
@@ -642,7 +642,7 @@ ggplot(acs_tracts_clean) +
 
 Now we can combine some of our data. First we'll take the property level rent stabilization data and aggregate the counts of stabilized units by census tract. Then we can join that new aggregated data with our ACS tract data. This will allow us to incorporate the count of rental units from the ACS data to create a tract-level measure of share of rental units that are rent stabilized. 
 
-To eventually join these two datasets we'll need to have a common column that identies the rows in each dataset - in this case it will be census tract "geoid". One issue is that in the rent stabilization data the tract column is not in the same format, so first will have to fix that.
+To eventually join these two datasets we'll need to have a common column that identifies the rows in each dataset - in this case it will be census tract "geoid". One issue is that in the rent stabilization data the tract column is not in the same format, so first will have to fix that.
 
 ```{r}
 tract_stab_units_2017 <- taxbills %>% 
@@ -665,6 +665,10 @@ knitr::include_graphics(path("img", "dplyr-joins-left-right-inner-full.png"))
 ```
 
 In this case we'll be using the most common join type - `left_join` - to keep all the records from our left table (ACS data) and merge in all the data for matching records in the right table (stabilized unit counts). 
+
+<aside>
+If the rows are idetified by multiple columns you can use `by = c("col_1", "col_2")`, and if you columns don't have the same names `by = c("left_col" = "right_col")`. See `?dplyr::left_join` for more details.
+</aside>
 
 ```{r}
 tracts_acs_stab <- acs_tracts_clean %>% 
@@ -690,7 +694,7 @@ in_acs_notin_stab <- acs_tracts_clean %>%
 in_acs_notin_stab %>% count(county)
 ```
 
-Once we are confident that our join went as planned, we can continue with our analysis work. Next we'll use data from the two sources to create a measure of the share of al rental units that are rent stabilized. 
+Once we are confident that our join went as planned, we can continue with our analysis work. Next we'll use data from the two sources to create a measure of the share of all rental units that are rent stabilized. 
 
 ```{r}
 tracts_rent_info <- tracts_acs_stab %>% 
@@ -724,4 +728,374 @@ tracts_rent_info %>%
   geom_smooth() +
   facet_wrap(~county)
 ```
+
+# Spatial Data
+
+Two kinds of spatial data, raster (pixels) and vector ()
+SF package - emerging as the new standard, you might see sp, but that's is being phased out
+
+simple features, international standard format for how to represent geometries in data (vector data)
+
+A feature geometry is called simple when it consists of points connected by straight line pieces, and does not intersect itself.
+
+```{r}
+knitr::include_graphics(path("img", "wkt_primitives.png"))
+```
+
+```{r}
+knitr::include_graphics(path("img", "wkt_multipart.png"))
+```
+
+We'll start with the the most simple type - point data. You'll already be familiar with latitude and longitude, and this is spatial point data. The only difference between something like lat/lon and these example values in the images above, is that lat/lon have an associated Coordinate Reference System (CRS) that describes how the numeric values of x and y correspond to positions on the earth. The CRS used for latitude and longitude data is called WGS84, and is often more conveniently specified using EPSG codes, in this case 4326. 
+
+Here are some common coordinate reference systems that you may see:  
+* 4326 - latitude/longitude
+* 3857 - Web Mercator 
+* 2263 - NY State Plane Long Island (feet)
+
+Let's start by creating some simple spatial data from lat/lon columns in a dataframe
+
+```{r}
+nyc_housing_courts <- tribble(
+                               ~court,             ~lat,              ~lon,
+                "Bronx Housing Court", 40.8322917983711, -73.9189644981048,
+             "Brooklyn Housing Court", 40.6908281879688, -73.9881400109281,
+  "Red Hook Community Justice Center", 40.6792674361971, -74.0094171241109,
+            "Manhattan Housing Court", 40.7168162247486, -74.0014321226876,
+    "Harlem Community Justice Center", 40.8012116588986, -73.9384598376274,
+               "Queens Housing Court", 40.7034894794273, -73.8080039304503,
+        "Staten Island Housing Court", 40.6350251497506, -74.1119001588143
+)
+
+nyc_housing_courts
+```
+
+<aside>
+Almost all of the functions in the `sf` package begin with `st_`. This follows conventions used in other spatial data tools using simple features like PostGIS, and also makes it convenient for auto-complete.
+</aside>
+
+Now we'll use `st_as_sf()` from the `sf` package to make it into a spatial dataframe, by providing the columns containing the y and x coordinates, and specify the CRS to use. Now when we print the data frame we get some extra information, including the bounding box and CRS, and you'll see we now have a new column `geometry` that is of the type `sfc_POINT` (simple features collection).
+
+<aside>
+Depending on the tool the ordering of x and y (long and lat) will differ.
+</aside>
+
+```{r}
+library(sf)
+
+nyc_housing_courts_sf <- st_as_sf(nyc_housing_courts, coords = c("lon", "lat"), crs = 4326)
+  
+nyc_housing_courts_sf
+```
+
+
+Now that we have a spatial dataframe with a CRS, we can transform the CRS by using `st_transform`. 
+
+```{r}
+nyc_housing_courts_sf_ny <- st_transform(nyc_housing_courts_sf, 2263)
+nyc_housing_courts_sf_ny
+```
+
+
+Now we'll look at some polygon data that we'll read in from a shapefile
+
+shapefiles are the most common format you'll find for spatial data
+
+they are really a collection of multiple files - as many as 13, but at least 3 files (`.dbf` attributes, `.shp` shapes, `.shx` shape index)
+
+
+we can read this in with `read_sf` 
+
+First we need to download the file. We'll be using a file of NYC census tracts from Open Data
+
+```{r}
+source(path("R", "download_tracts.R"))
+```
+
+When we print the dataframe we can see that it is using the `2263` CRS. One of the optional files (`.prj`) contains the projection (CRS) information, but if that's missing you'll need to specify what CRS to use when you import the data. 
+
+We can also see that the data type of the geometry column is `sfc_MULTIPOLYGON`. They are*_multi*polygons because some tracts include multiple islands, etc.
+```{r}
+nyc_tracts <- read_sf(path("data-raw", "nyc-tracts-2010", "nyct2010.shp"))
+
+# let's first clean up the column names
+nyc_tracts <- nyc_tracts %>% rename_all(str_to_lower)
+
+nyc_tracts
+```
+
+Now that we have a couple different spatial dataframes, let's take a look at them
+
+We can use the same basic ggplot2 tools to do this
+
+To just look at the geometries we can omit the `aes()` now because it knows which columns to use for x and y, but if we want to specify what column to use for color, we can do that the same way as before
+
+```{r}
+ggplot(nyc_housing_courts_sf) +
+  # aes(color = court) +
+  geom_sf()
+```
+
+if we want to change the crs, we don't have to use `st_transform`, but can use `coord_sf`
+
+this can be helpful, because the crs that's best for working with the data might not be the same as how you want to display it. for example, if you are doing analysis it's helpful to use a system that is in feet or metres rather than degrees, but the web mapping standard 3587 can look good for maps
+
+```{r}
+ggplot(nyc_housing_courts_sf) +
+  geom_sf() +
+  coord_sf(crs = 3587)
+```
+
+now let's layer on the tract polygons
+
+by default when using multiple spatial dataframes, ggplot will transform them to use the same CRS
+
+```{r}
+ggplot() +
+  geom_sf(data = nyc_tracts) +
+  geom_sf(data = nyc_housing_courts_sf)
+```
+
+Now lets add some data to these tract geometries 
+
+
+```{r}
+nyc_tracts_acs <- nyc_tracts %>% 
+  mutate(
+    county = recode(borocode, "1" = "061", "2" = "005", "3" = "047", "4" = "081", "5" = "085"),
+    geoid = str_c("36", county, ct2010)
+  ) %>% 
+  left_join(acs_tracts_clean, by = "geoid")
+
+nyc_tracts_acs
+```
+
+now we can plot some of our census data
+
+```{r}
+ggplot(nyc_tracts_acs) +
+  aes(fill = renter_pctE) +
+  geom_sf(color = "white", size = 0.05) +
+  scale_fill_viridis_c(labels = scales::percent) +
+  theme_void() +
+  theme(legend.position = c(0.1, .75)) +
+  labs(
+    title = "Renter Share of Units",
+    subtitle = "New York City,Census Tracts, 2014-2018",
+    fill = NULL,
+    caption = "Sources: American Community Survey (2014-2018)"
+  )
+```
+
+always have to be careful about how to communicate uncertainty in graphs like this, we know the margins of error can be quite large on tract data, and this doesn't communicate that in any way
+
+one way to address this is bin the continuous values into categories
+
+but we still aren't showing the level of uncertainty about whether any given area may be misclassified simply due to sampling error
+
+There are some tools that city planning uses to help enforce some basic standards for reliability, and I made a simple package that helps you test this out in R, for details see [`mapreliability`](https://github.com/austensen/mapreliability#mapreliability).
+
+When you use this tool with ACS tract data you'll often find that it's very hard to classify the data in any reasonable way that satisfies the thresholds. In that case then the best thing to do is consider using data aggregated at a larger geography that will give you a larger sample and smaller MOEs. 
+
+The other options will often be too large for neighborhood analysis, but city planning has also helped with that by defining Neighborhood Tabulation Areas, which are aggregations of census tracts. 
+
+The census tract geometries we downloaded have this variable, and so we can aggregate our own census data and at the same time combine our tract geometries to create a new nta-level dataset and geometries.
+
+You need to take some care in handling the estiamtes and margins so that the MOE calculations are valid. We can't simply take the mean the share and it's MOE, but instead need to sum up the components and then recalculate the share
+
+```{r}
+nyc_ntas_acs <- nyc_tracts_acs %>% 
+  group_by(ntacode, ntaname) %>% 
+  summarise(
+    occ_renter_unitsE = sum(occ_renter_unitsE),
+    occ_renter_unitsM = moe_sum(occ_renter_unitsM),
+    occ_unitsE = sum(occ_unitsE),
+    occ_unitsM = moe_sum(occ_unitsM),
+    geometry = st_union(geometry)
+  ) %>% 
+  ungroup() %>% 
+  mutate(
+    renter_pctE = occ_renter_unitsE / na_if(occ_unitsE, 0),
+    renter_pctM = moe_ratio(occ_renter_unitsE, na_if(occ_unitsE, 0), occ_renter_unitsM, occ_unitsM)
+  )
+
+nyc_ntas_acs
+```
+
+```{r}
+ggplot(nyc_ntas_acs) +
+  aes(fill = renter_pctE) +
+  geom_sf(color = "white", size = 0.05) +
+  scale_fill_viridis_c(labels = scales::percent) +
+  theme_void() +
+  theme(legend.position = c(0.1, .75)) +
+  labs(
+    title = "Renter Share of Units",
+    subtitle = "New York City, Neighborhood Tabulation Areas, 2014-2018",
+    fill = NULL,
+    caption = "Sources: American Community Survey (2014-2018)"
+  )
+```
+
+
+```{r}
+hpd_viol_query <- str_glue(
+  "https://data.cityofnewyork.us/resource/wvxf-dwi5.csv?$query=
+  select violationid, inspectiondate, latitude, longitude
+  where inspectiondate > '{Sys.Date()-7}T00:00:00'
+   and latitude is not null
+  limit 100000")
+
+hpd_violations <- read_csv(URLencode(hpd_viol_query)) %>% 
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) %>% 
+  st_transform(2263) 
+
+hpd_violations
+```
+
+```{r}
+hpd_violations_joined <- nyc_ntas_acs %>% 
+  st_join(hpd_violations, st_intersects) %>% 
+  select(violationid, inspectiondate, ntacode, ntaname)
+
+hpd_violations_joined
+```
+
+```{r}
+hpd_violations_ntas <- hpd_violations_joined %>% 
+  group_by(ntacode, ntaname) %>% 
+  summarise(violations = sum(!is.na(inspectiondate))) %>% 
+  ungroup()
+
+hpd_violations_ntas
+```
+
+```{r}
+ggplot(hpd_violations_ntas) +
+  aes(fill = violations) +
+  geom_sf(color = "white", size = 0.05) +
+  scale_fill_viridis_c(labels = scales::comma) +
+  theme_void() +
+  theme(legend.position = c(0.1, .75)) +
+  labs(
+    title = "Housing Maintenance Code Violations",
+    subtitle = str_glue("New York City, Neighborhood Tabulation Areas, {Sys.Date()-7} to {Sys.Date()}"),
+    fill = NULL,
+    caption = "Sources: Department of Housing Preservation and Development (HPD) via Open Data"
+  )
+```
+
+## Resources
+
+* [Geocomputation with R](https://geocompr.robinlovelace.net/)
+* [Using Spatial Data with R](https://cengel.github.io/R-spatial/)
+* [`sf` package website](https://r-spatial.github.io/sf/articles/sf1.html)
+* [R-Spatial blog](https://www.r-spatial.org/)
+* https://spatialreference.org/ (finding CRS)
+* [Spatial Data Science Center (Tutorials)](https://spatialanalysis.github.io/tutorials/)
+
+# Survey Data
+
+So far we've been working with ACS data that is already tabulated for us, but sometimes there are cuts of the data that are not available and so we can use the microdata to calculate these statistics ourselves.
+
+Because these microdata are some a survey we can't simply treat them as a reagular dataframe and sum up columns because there are survey weights associated with each observation and these need to be incorporatd. In some cases the weights are simple and it would be enough to use weighted means, etc. to get our estimates, but when the survey design is more complicated and/or get margins of error on our estimates, we'll need some other tools. 
+
+Here we'll be working with the `srvyr` package, which (in the same spirit as the `sf` package) allows us to set up our data frame with some special information abot the survey design and then use the existing `dplyr` tools we know to work with the data. 
+
+First lets's import some ACS microdata. We'll be using a file for NY downloaded from [IPUMS](https://usa.ipums.org/), which cleans up the ACS Public Use Microdata Sample (PUMS) data to make it easier to work with. Unfortunately they don't have a system to automate these downloads, so we need to do it manually. I'm goig to borrow the file from another [project](https://github.com/FurmanCenter/covid-rental-assistance#ipums-american-community-survey-microdata), where you can read a description of the variables and how to download a copy. 
+
+```{r}
+# Read in IPUMS USA ACS microdata, standardize the column names
+ipums_raw <- read_csv(path("data-raw", "ipums_acs-2018-1yr_ny.csv.gz")) %>% rename_all(str_to_lower)
+```
+
+First I'm going to do some basic cleaning and create some variables for analysis
+
+```{r}
+ipums_clean <- ipums_raw %>% 
+  filter(
+    # Remove group quarters population
+    gq %in% 1:2,
+    # Keep only head-of-household records
+    pernum == 1,
+    # keep only NYC
+    countyfip %in% c(5, 47, 61, 81, 85)
+  ) %>% 
+  transmute(
+    serial,
+    hhwt,
+    countyfip,
+    
+    # Household income
+    hh_inc_nom = case_when(
+      hhincome <= 0 ~ 0,
+      hhincome == 9999999 ~ NA_real_, 
+      TRUE ~ hhincome
+    ),
+    hh_inc_grp = cut(
+      hh_inc_nom, c(-Inf, 25e3, 50e3, 75e3, 100e3, 125e5, 150e3, Inf),
+      c("< $25k", "$25k - 50k", "$50k - $75k", "$75k - $100k", "$100k - $125k", "$125k - $150k", ">= $150k"),
+      include.lowest = TRUE, 
+      ordered_result = TRUE
+    ),
+    
+    # Renter vars
+    is_renter = (ownershp == 2),
+    gross_rent_nom = if_else(is_renter, rentgrs, NA_real_),
+    rent_burden = gross_rent_nom / (hh_inc_nom / 12),
+    is_rent_burdened = (rent_burden > 0.30)
+  )
+```
+
+now we can set the survey design info
+
+```{r}
+library(srvyr)
+
+ipums_svy <- as_survey_design(ipums_clean, weights = hhwt)
+
+ipums_svy
+```
+
+```{r}
+ipums_inc_burden <- ipums_svy %>% 
+  filter(
+    is_renter,
+    !is.na(hh_inc_grp),
+  ) %>% 
+  group_by(hh_inc_grp) %>% 
+  summarise(
+    rent_burden_pct = survey_mean(is_rent_burdened, na.rm = TRUE, vartype = "ci", level = 0.95)
+  ) %>% 
+  ungroup()
+
+ipums_inc_burden
+```
+
+```{r}
+ggplot(ipums_inc_burden) +
+  aes(x = hh_inc_grp, y = rent_burden_pct, ymin = rent_burden_pct_low, ymax = rent_burden_pct_upp) +
+  geom_col(fill = "goldenrod") +
+  geom_errorbar() +
+  geom_text(
+    aes(y = rent_burden_pct_upp, label = scales::percent(rent_burden_pct)),
+    vjust = -0.5, size = 3.5
+  ) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  theme_minimal() +
+  labs(
+    title = str_glue(
+      "Share of Renter Households Paying More than 30% of Monthly Income on Rent, 
+      by Annual Household Income Level"
+    ),
+    subtitle = "New York City, 2018",
+    x = "Household income",
+    y = "Share of Renter Households",
+    caption = str_glue(
+      "Notes: Error bars represent 95% confidence intervals, and value labels reflect point estimates
+      Sources: American Community Survey (2018), IPUMS USA"
+    )
+  )
+```
+
 
