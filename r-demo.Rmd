@@ -414,7 +414,7 @@ For this example of reshaping data we'll be working with a dataset of building i
 In this separate script we download the file if we don't already have it. 
 
 ```{r}
-source("download-rent-stab.R")
+source(path("R", "download-rent-stab.R"))
 ```
 
 ```{r}
