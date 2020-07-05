@@ -1113,7 +1113,7 @@ ggplot(ipums_inc_burden) +
   )
 ```
 
-## Modelling Examples
+# Modeling
 
 Logistic regression with dependent variable of whether they rent their home, predicted by characteristics of the head-of-household. 
 
@@ -1218,3 +1218,10 @@ tbl_regression(
   )
 )
 ```
+
+### Resources
+
+* [Data Visualization - Work with Models](https://socviz.co/modeling.html) 
+* [Principles of Economterics with R](https://bookdown.org/ccolonescu/RPoE4/)
+* [Statistical Inference via Data Science](https://moderndive.com/)
+* [Tidymodels documentation](https://www.tidymodels.org/)

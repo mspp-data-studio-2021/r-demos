@@ -42,30 +42,6 @@ glance(model)
 augment(model, data = mtcars)
 ```
 
-
-
-```{r results='asis'}
-library(stargazer)
-
-stargazer(
-  model,
-  type = "html", 
-  style = "jpam",
-  digits = 2
-)
-```
-
-```{r results='asis'}
-model2 <- lm(mpg ~ wt + am, data = mtcars)
-
-stargazer(
-  model, model2,
-  type = "html", 
-  style = "jpam",
-  digits = 2
-)
-```
-
 $$
 \begin{aligned}
 \mathrm{Unit.Sales}_{t} = \alpha 
@@ -82,7 +58,7 @@ $$
 
 
 
-## Resources
+### Resources
 
 * [Data Visualization - Work with Models](https://socviz.co/modeling.html) 
 * [Principles of Economterics with R](https://bookdown.org/ccolonescu/RPoE4/)
