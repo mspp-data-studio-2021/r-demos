@@ -820,8 +820,6 @@ nyc_tracts <- read_sf(path("data-raw", "nyc-tracts-2010", "nyct2010.shp"))
 
 # let's first clean up the column names
 nyc_tracts <- nyc_tracts %>% rename_all(str_to_lower)
-
-nyc_tracts
 ```
 
 Now that we have a couple different spatial dataframes, let's take a look at them
@@ -876,7 +874,7 @@ now we can plot some of our census data
 ggplot(nyc_tracts_acs) +
   aes(fill = renter_pctE) +
   geom_sf(color = "white", size = 0.05) +
-  scale_fill_viridis_c(labels = scales::percent) +
+  scale_fill_viridis_b(labels = scales::percent) +
   theme_void() +
   theme(legend.position = c(0.1, .75)) +
   labs(
@@ -901,7 +899,7 @@ The other options will often be too large for neighborhood analysis, but city pl
 
 The census tract geometries we downloaded have this variable, and so we can aggregate our own census data and at the same time combine our tract geometries to create a new nta-level dataset and geometries.
 
-You need to take some care in handling the estiamtes and margins so that the MOE calculations are valid. We can't simply take the mean the share and it's MOE, but instead need to sum up the components and then recalculate the share
+You need to take some care in handling the estimates and margins so that the MOE calculations are valid. We can't simply take the mean the share and it's MOE, but instead need to sum up the components and then recalculate the share
 
 ```{r}
 nyc_ntas_acs <- nyc_tracts_acs %>% 
@@ -936,7 +934,6 @@ ggplot(nyc_ntas_acs) +
     caption = "Sources: American Community Survey (2014-2018)"
   )
 ```
-
 
 ```{r}
 hpd_viol_query <- str_glue(
@@ -994,15 +991,16 @@ ggplot(hpd_violations_ntas) +
 * https://spatialreference.org/ (finding CRS)
 * [Spatial Data Science Center (Tutorials)](https://spatialanalysis.github.io/tutorials/)
 
+
 # Survey Data
 
 So far we've been working with ACS data that is already tabulated for us, but sometimes there are cuts of the data that are not available and so we can use the microdata to calculate these statistics ourselves.
 
-Because these microdata are some a survey we can't simply treat them as a reagular dataframe and sum up columns because there are survey weights associated with each observation and these need to be incorporatd. In some cases the weights are simple and it would be enough to use weighted means, etc. to get our estimates, but when the survey design is more complicated and/or get margins of error on our estimates, we'll need some other tools. 
+Because these microdata are some a survey we can't simply treat them as a regular dataframe and sum up columns because there are survey weights associated with each observation and these need to be incorporated. In some cases the weights are simple and it would be enough to use weighted means, etc. to get our estimates, but when the survey design is more complicated and/or get margins of error on our estimates, we'll need some other tools. 
 
-Here we'll be working with the `srvyr` package, which (in the same spirit as the `sf` package) allows us to set up our data frame with some special information abot the survey design and then use the existing `dplyr` tools we know to work with the data. 
+Here we'll be working with the `srvyr` package, which (in the same spirit as the `sf` package) allows us to set up our data frame with some special information about the survey design and then use the existing `dplyr` tools we know to work with the data. 
 
-First lets's import some ACS microdata. We'll be using a file for NY downloaded from [IPUMS](https://usa.ipums.org/), which cleans up the ACS Public Use Microdata Sample (PUMS) data to make it easier to work with. Unfortunately they don't have a system to automate these downloads, so we need to do it manually. I'm goig to borrow the file from another [project](https://github.com/FurmanCenter/covid-rental-assistance#ipums-american-community-survey-microdata), where you can read a description of the variables and how to download a copy. 
+First let's import some ACS microdata. We'll be using a file for NY downloaded from [IPUMS](https://usa.ipums.org/), which cleans up the ACS Public Use Microdata Sample (PUMS) data to make it easier to work with. Unfortunately they don't have a system to automate these downloads, so we need to do it manually. I'm goig to borrow the file from another [project](https://github.com/FurmanCenter/covid-rental-assistance#ipums-american-community-survey-microdata), where you can read a description of the variables and how to download a copy. 
 
 ```{r}
 # Read in IPUMS USA ACS microdata, standardize the column names
@@ -1043,7 +1041,24 @@ ipums_clean <- ipums_raw %>%
     is_renter = (ownershp == 2),
     gross_rent_nom = if_else(is_renter, rentgrs, NA_real_),
     rent_burden = gross_rent_nom / (hh_inc_nom / 12),
-    is_rent_burdened = (rent_burden > 0.30)
+    is_rent_burdened = (rent_burden > 0.30),
+    
+    
+    # Race/ethnicity 
+    race_eth = case_when(
+      hispan %in% 1:4 ~ "Hispanic, of any race",
+      race == 1 ~ "Non-Hispanic white",
+      race == 2 ~ "Non-Hispanic Black",
+      race == 3 ~ "Non-Hispanic American Indian or Alaska Native",
+      race == 4 ~ "Non-Hispanic Asian or Pacific Islander", # Chinese
+      race == 5 ~ "Non-Hispanic Asian or Pacific Islander", # Japanese
+      race == 6 ~ "Non-Hispanic Asian or Pacific Islander", # Other Asian or Pacific Island
+      race == 7 ~ "Non-Hispanic other",
+      race == 8 ~ "Non-Hispanic Two or more major races", # Two major races
+      race == 9 ~ "Non-Hispanic Two or more major races" # Three or more major races
+    ),
+    
+    age
   )
 ```
 
@@ -1098,4 +1113,108 @@ ggplot(ipums_inc_burden) +
   )
 ```
 
+## Modelling Examples
 
+Logistic regression with dependent variable of whether they rent their home, predicted by characteristics of the head-of-household. 
+
+```{r}
+model_1 <- glm(
+  is_renter ~ hh_inc_nom + factor(race_eth) + age + factor(countyfip), 
+  data = ipums_clean, 
+  weights = hhwt,
+  family = binomial(link = "logit")
+)
+```
+
+The built-in summary function gives you helpful information, but it only prints it to the screen as text, and if you capture the results it's a complicated list structure.
+
+```{r}
+summary(model_1)
+```
+
+The [`broom`](https://broom.tidymodels.org/) package provides some helpful functions that extract the relvent information from the model object and return them as a dataframe so that you can use some of the data manipulation and graphing tools that you are already familiar with.
+
+```{r}
+library(broom)
+```
+
+There are three functions that extract different levels of information from the model.
+
+`tidy()` gives you a dataframe where each row contains information regression coefficients
+
+```{r}
+tidy(model_1)
+```
+`glance()` returns a dataframe with exactly one row of goodness of fitness measures and related statistics.
+
+```{r}
+glance(model_1)
+```
+`augment()` adds columns to a dataset, containing information such as fitted values, residuals or cluster assignments. All columns added to a dataset have . prefix to prevent existing columns from being overwritten.
+
+```{r}
+augment(model_1, data = ipums_clean) %>% 
+  # Select just a few columns to see what's added
+  select(serial, starts_with("."))
+```
+The package [`gtsummary`](http://www.danieldsjoberg.com/gtsummary) builds on `broom` and another package for making tables called [`gt`](https://gt.rstudio.com/) and provides helpful tools for quickly creating nicely formatted tables of results that can be highly customized. 
+
+```{r}
+library(gtsummary)
+```
+
+Before we even get to the regression model, it can be helpful to create some presentation-ready summary tables about our two groups - renters and owners. `tbl_summary()` can help with this (for more details see this [tutorial](http://www.danieldsjoberg.com/gtsummary/articles/tbl_summary.html))
+
+By default it will give you a very helpful table choosing reasonable default for statistics based on the type of variable (numeric, character/factor, etc), but you can specify exactly what types of statistics (and how they are formatted) in the table. You can also use `add_p()` to automatically add a column of p-values.
+
+> NOTE: the `gtsummary` package does not support data with survey weights, so for the this example of how it works we'll be ignoring the survey weights, but if you data has weights you'll need to use the `srvyr` tools above to create your own summary tables and then you can use `gt` alone to create tables for thsoe results. 
+
+```{r}
+ipums_clean %>%
+  select(is_renter, hh_inc_nom, age, race_eth, countyfip) %>% 
+  tbl_summary(
+    by = is_renter,
+    label = list(
+      hh_inc_nom ~ "Household Income",
+      age ~ "Age, years", 
+      countyfip ~ "County", 
+      race_eth ~ "Race/Ethnicity"
+    )
+  ) %>% 
+  add_p()
+```
+
+Now we'll move back to our logit model, and use the `tbl_regression()` function. Again, it detects the type of model you have and uses some reasonable defaults to display your results in a helpful format. For example, for a logit model like we have it will present odds ratios. 
+
+```{r}
+tbl_regression(
+  model_1, 
+  exponentiate = TRUE,
+  label = list(
+    "hh_inc_nom" ~ "Household Income",
+    "age" ~ "Age, years", 
+    "factor(countyfip)" ~ "County", 
+    "factor(race_eth)" ~ "Race/Ethnicity"
+  )
+)
+```
+
+If instead we are using a basic OLS model, it will present the results differently. 
+
+```{r}
+model_2 <- lm(
+  hh_inc_nom ~ is_renter + factor(race_eth) + age + factor(countyfip), 
+  data = ipums_clean, 
+  weights = hhwt
+)
+
+tbl_regression(
+  model_2,
+  label = list(
+    "is_renter" ~ "Renter",
+    "age" ~ "Age, years", 
+    "factor(countyfip)" ~ "County", 
+    "factor(race_eth)" ~ "Race/Ethnicity"
+  )
+)
+```
