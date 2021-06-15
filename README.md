@@ -8,4 +8,4 @@ This project uses [`renv`](https://rstudio.github.io/renv/articles/renv.html) to
 > If you haven't installed any R packages yet, this might take a little while.
 
 
-# [Rendered workshop document](https://wagner-mspp-2020.github.io/r-demos/r-demo.html)
+# [Rendered workshop document](https://mspp-data-studio-2021.github.io/r-demos/r-demo.html)
